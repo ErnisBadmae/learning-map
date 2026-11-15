@@ -213,7 +213,7 @@ function blockCard(board, block) {
     card.classList.add("opens");
     card.append(miniSchema(inner), el("div", "zoom", "⤢ Раскрыть: " + inner.level.title));
   }
-  if (block.key) card.append(talkLink(block.key), talkLink(block.key, true));
+  if (block.key && DATA.bot) card.append(talkLink(block.key), talkLink(block.key, true));
   return card;
 }
 
@@ -237,7 +237,7 @@ function tileCard(board, block) {
     const side = (inner.level.side || []).length;
     card.append(el("div", "meta", inner.level.blocks.length + " этапов" + (side ? " · " + side + " карточек метрик" : "")));
   }
-  if (block.key) card.append(talkLink(block.key));
+  if (block.key && DATA.bot) card.append(talkLink(block.key));
   return card;
 }
 
@@ -288,7 +288,9 @@ function render(at) {
         main.append(row);
       });
     }
-    main.append(el("div", "hint", "Карточка с «⤢ Раскрыть» — внутри своя схема, нажми, и она откроется на весь экран. 💬 — разговор о блоке в боте, ✏️ — поправить его текст словами; после него «🧩 Разложить в схему» растит уровень глубже. Справа (на телефоне — под шагом) — метрики этапа. Esc — на уровень выше."));
+    main.append(el("div", "hint", DATA.bot
+      ? "Карточка с «⤢ Раскрыть» — внутри своя схема, нажми, и она откроется на весь экран. 💬 — разговор о блоке в боте, ✏️ — поправить его текст словами; после него «🧩 Разложить в схему» растит уровень глубже. Справа (на телефоне — под шагом) — метрики этапа. Esc — на уровень выше."
+      : "Карточка с «⤢ Раскрыть» — внутри своя схема, нажми, и она откроется на весь экран. Сбоку (на телефоне — под шагом) — где живёт состояние. Esc — на уровень выше."));
   }
   document.getElementById("app").replaceChildren(main);
   renderTrail(at);
