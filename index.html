@@ -50,6 +50,9 @@ main.wide .row { grid-template-columns: 40px minmax(0, 1fr) 340px; column-gap: 2
 .talk { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%;
   background: #fff; border: 1px solid var(--line); text-decoration: none; font-size: 17px; }
 .talk:hover { background: #e7f5ff; border-color: var(--open); }
+/* ✏️ under 💬: smaller, the block grows tall enough to hold both. */
+.talk.edit { top: 48px; width: 30px; height: 30px; right: 10px; font-size: 14px; }
+.block:has(.edit) { min-height: 88px; }
 /* Metrics of a stage: a card with a coloured top, a label and the numbers made big. */
 .notes { display: grid; gap: 10px; align-content: start; position: relative; padding-bottom: 16px; }
 .notes::before { content: ""; position: absolute; left: -20px; top: 26px; width: 20px; border-top: 2px dashed var(--rail); }
@@ -183,10 +186,11 @@ function miniSchema(inner) {
   return mini;
 }
 
-function talkLink(key) {
-  const talk = el("a", "talk", "💬");
-  talk.href = "tg://resolve?domain=" + DATA.bot + "&start=" + key;
-  talk.title = "Обсудить этот блок с тьютором в Telegram";
+// 💬 talks about the block (start=b_…), ✏️ edits its text in words (start=e_…); the bot answers only its learners.
+function talkLink(key, edit) {
+  const talk = el("a", edit ? "talk edit" : "talk", edit ? "✏️" : "💬");
+  talk.href = "tg://resolve?domain=" + DATA.bot + "&start=" + (edit ? "e_" + key.slice(2) : key);
+  talk.title = edit ? "Поправить текст блока словами в Telegram" : "Обсудить этот блок с тьютором в Telegram";
   talk.onclick = (event) => event.stopPropagation();
   return talk;
 }
@@ -209,7 +213,7 @@ function blockCard(board, block) {
     card.classList.add("opens");
     card.append(miniSchema(inner), el("div", "zoom", "⤢ Раскрыть: " + inner.level.title));
   }
-  if (block.key) card.append(talkLink(block.key));
+  if (block.key) card.append(talkLink(block.key), talkLink(block.key, true));
   return card;
 }
 
@@ -284,7 +288,7 @@ function render(at) {
         main.append(row);
       });
     }
-    main.append(el("div", "hint", "Карточка с «⤢ Раскрыть» — внутри своя схема, нажми, и она откроется на весь экран. 💬 — разговор о блоке в боте; после него «🧩 Разложить в схему» растит уровень глубже. Справа (на телефоне — под шагом) — метрики этапа. Esc — на уровень выше."));
+    main.append(el("div", "hint", "Карточка с «⤢ Раскрыть» — внутри своя схема, нажми, и она откроется на весь экран. 💬 — разговор о блоке в боте, ✏️ — поправить его текст словами; после него «🧩 Разложить в схему» растит уровень глубже. Справа (на телефоне — под шагом) — метрики этапа. Esc — на уровень выше."));
   }
   document.getElementById("app").replaceChildren(main);
   renderTrail(at);
