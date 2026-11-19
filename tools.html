@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Выбор инструмента MLSD</title>
+<style>
+:root { --ink: #1b1f24; --muted: #667085; --line: #d9dee5; --accent: #1c7ed6; --bg: #f3f5f8; --card: #fff; --tag: #e7f0fb; }
+@media (prefers-color-scheme: dark) {
+  :root { --ink: #e6e8eb; --muted: #9aa4b2; --line: #2f3742; --accent: #5aa9ff; --bg: #14181d; --card: #1c2128; --tag: #1d2c40; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, "Segoe UI", Arial, sans-serif; }
+main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 22px; margin: 4px 0 12px; }
+h2 { font-size: 17px; margin: 24px 0 8px; }
+a { color: var(--accent); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+ol, ul { margin: 6px 0; padding-left: 22px; }
+li { margin: 3px 0; }
+b.t { background: var(--tag); padding: 0 5px; border-radius: 4px; font-weight: 600; }
+table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 13px; color: var(--muted); font-weight: 600; background: var(--bg); }
+td:first-child { font-weight: 600; width: 16%; }
+tr:last-child td { border-bottom: 0; }
+small { color: var(--muted); }
+@media (max-width: 760px) {
+  table, tbody, tr, td { display: block; width: 100%; }
+  thead { display: none; }
+  table { border: 0; background: none; }
+  tr { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; padding: 6px 0; }
+  td { border: 0; padding: 4px 12px; }
+  td:first-child { width: 100%; font-size: 16px; }
+  td:not(:first-child)::before { content: attr(data-l); display: block; font-size: 12px; color: var(--muted); }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>Выбор инструмента: от выхода к модели</h1>
+
+<div class="card">
+<b>Три вопроса — они выбирают инструмент</b>
+<ol>
+<li><b>Что на выходе?</b>
+  одна метка из N → <b class="t">мультикласс</b> (softmax + CE) ·
+  да/нет → <b class="t">бинарная</b> (сигмоида + BCE = логрег) ·
+  несколько меток сразу → <b class="t">мультилейбл</b> (N сигмоид + BCE) ·
+  число → <b class="t">регрессия</b> (линрег, MSE/MAE) ·
+  уровень 1–5 → <b class="t">порядковая</b> ·
+  список → <b class="t">ранжирование</b> ·
+  поля из текста → <b class="t">извлечение</b> ·
+  свободный текст → <b class="t">генерация</b></li>
+<li><b>Сколько выходов у одного входа?</b> Больше одного → один общий энкодер и голова на каждый выход, лоссы складываются с весами.</li>
+<li><b>Какой вход?</b> Таблица → бустинг. Текст → TF-IDF, потом энкодер. Несколько модальностей → энкодер на каждую, потом слияние.</li>
+</ol>
+</div>
+
+<h2>Кейсы</h2>
+<table>
+<thead><tr><th>Кейс</th><th>Выход → тип</th><th>Бейзлайн и почему</th><th>ML: инструмент</th><th>Метрика</th></tr></thead>
+<tbody>
+<tr><td>Тема обращения</td>
+<td data-l="Выход → тип">одна из N → <b class="t">мультикласс</b></td>
+<td data-l="Бейзлайн">ключевые слова → TF-IDF + логрег: слова часто решают</td>
+<td data-l="ML">энкодер + softmax, CE — если много перефразов</td>
+<td data-l="Метрика">macro-F1</td></tr>
+<tr><td>Тема + срочность + эскалация</td>
+<td data-l="Выход → тип">3 выхода на один текст → <b class="t">энкодер с 3 головами</b></td>
+<td data-l="Бейзлайн">правила + 3 отдельных логрега на TF-IDF</td>
+<td data-l="ML">один энкодер: softmax / сигмоида / сигмоида, сумма лоссов с весами; текст кодируется один раз</td>
+<td data-l="Метрика">своя на каждую голову</td></tr>
+<tr><td>Типы событий в новости <small>(кейс 3)</small></td>
+<td data-l="Выход → тип">дивиденды <i>и</i> суд одновременно → <b class="t">мультилейбл</b></td>
+<td data-l="Бейзлайн">словарь на каждый тип / логрег по каждой метке на TF-IDF</td>
+<td data-l="ML">энкодер + N сигмоид, BCE; порог на каждую метку</td>
+<td data-l="Метрика">PR по каждой метке</td></tr>
+<tr><td>Срочность 1–5</td>
+<td data-l="Выход → тип">уровни с порядком → <b class="t">порядковая</b></td>
+<td data-l="Бейзлайн">правила по словам</td>
+<td data-l="ML">регрессия с округлением или K−1 бинарных «&gt; k»; не softmax — иначе 1 и 5 «одинаково далеки»</td>
+<td data-l="Метрика">MAE, взвешенная каппа</td></tr>
+<tr><td>Нагрузка на операторов завтра</td>
+<td data-l="Выход → тип">число → <b class="t">регрессия</b></td>
+<td data-l="Бейзлайн">«как неделю назад»: сезонность сильная</td>
+<td data-l="ML">линрег на лагах → бустинг на лагах и календаре</td>
+<td data-l="Метрика">MAE, MAPE</td></tr>
+<tr><td>Фрод по операции</td>
+<td data-l="Выход → тип">да/нет по таблице → <b class="t">бинарная, бустинг</b></td>
+<td data-l="Бейзлайн">правила + логрег: интерпретируемо</td>
+<td data-l="ML">бустинг; <b>каскад</b>: правила → бустинг → человек на сером пороге</td>
+<td data-l="Метрика">recall при заданном precision, PR-AUC</td></tr>
+<tr><td>Модерация с человеком <small>(М5)</small></td>
+<td data-l="Выход → тип">да/нет + к человеку → <b class="t">бинарная + 2 порога</b></td>
+<td data-l="Бейзлайн">стоп-слова</td>
+<td data-l="ML">энкодер → калибровка → выше порога блок, ниже пропуск, середина — человеку</td>
+<td data-l="Метрика">precision автоматики, нагрузка на людей</td></tr>
+<tr><td>Ответ из базы знаний</td>
+<td data-l="Выход → тип">список документов → <b class="t">ранжирование</b></td>
+<td data-l="Бейзлайн">BM25</td>
+<td data-l="ML"><b>каскад</b>: bi-encoder отбирает 100 → cross-encoder переставляет топ → LLM отвечает по найденному</td>
+<td data-l="Метрика">Recall@k, NDCG@10, faithfulness</td></tr>
+<tr><td>Рекомендация продукта УК <small>(кейс 5)</small></td>
+<td data-l="Выход → тип">лучший продукт или ничего → <b class="t">ранжирование / uplift</b></td>
+<td data-l="Бейзлайн">популярное среди пригодных</td>
+<td data-l="ML">фильтр пригодности кодом → бустинг на каждый продукт → uplift (T-learner)</td>
+<td data-l="Метрика">Qini, приток против контроля</td></tr>
+<tr><td>«Продай половину Сбера» <small>(кейс 4)</small></td>
+<td data-l="Выход → тип">поля → <b class="t">извлечение</b>, не классификация</td>
+<td data-l="Бейзлайн">регулярки + словарь тикеров</td>
+<td data-l="ML">LLM со схемой JSON + намерение (мультикласс); лоты считает код</td>
+<td data-l="Метрика">точное совпадение полей</td></tr>
+<tr><td>Документы на квал <small>(кейс 6)</small></td>
+<td data-l="Выход → тип">тип + поля → <b class="t">мультикласс + извлечение</b></td>
+<td data-l="Бейзлайн">OCR + регулярки по типу</td>
+<td data-l="ML">классификатор типа → OCR / VLM в схему → проверки кодом; решение принимает код, не модель</td>
+<td data-l="Метрика">точность по полю</td></tr>
+<tr><td>Обращение со скриншотом и голосом</td>
+<td data-l="Выход → тип">вход из 3 модальностей</td>
+<td data-l="Бейзлайн">всё в текст: ASR + OCR → текстовая модель</td>
+<td data-l="ML">энкодер на каждую модальность → слияние → те же головы</td>
+<td data-l="Метрика">как у текстовой модели</td></tr>
+<tr><td>Агент: какой шаг делать</td>
+<td data-l="Выход → тип">следующее действие → <b class="t">маршрутизация</b></td>
+<td data-l="Бейзлайн">конечный автомат + правила</td>
+<td data-l="ML">классификатор намерения → LLM-роутер только на неуверенных</td>
+<td data-l="Метрика">доля верных маршрутов, pass^k</td></tr>
+<tr><td>Дубли обращений</td>
+<td data-l="Выход → тип">пара похожа / нет</td>
+<td data-l="Бейзлайн">MinHash по тексту</td>
+<td data-l="ML">эмбеддинги + косинус, порог по разметке</td>
+<td data-l="Метрика">precision при пороге</td></tr>
+</tbody>
+</table>
+
+<h2>Что путается</h2>
+<div class="card">
+<ul>
+<li><b>Лестница ≠ каскад.</b> Лестница — порядок разработки: правила → TF-IDF + логрег → энкодер → LLM; следующую ступень берёшь, только если предыдущая не прошла приёмку. Каскад — порядок в проде на одном запросе: дешёвая модель сначала, дорогая модель или человек — только на неуверенных.</li>
+<li><b>Логрег — не слой поверх голов.</b> Бинарная голова (линейный слой + сигмоида) и есть логрег над вектором энкодера. Линрег — когда на выходе число, а не вероятность.</li>
+<li><b>Эмбеддинг 768 при сотне примеров на класс</b> — признаков больше, чем данных: PCA до 64–128 + регуляризованный логрег, а бустингу — не сырой вектор, а прогноз модели над ним.</li>
+</ul>
+</div>
+<p><a href="./">← Карта обучения</a></p>
+</main>
+</body>
+</html>
