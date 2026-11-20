@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Техсекция: Python, SQL, ряды, инференс</title>
+<style>
+:root { --ink: #1b1f24; --muted: #667085; --line: #d9dee5; --accent: #1c7ed6; --bg: #f3f5f8; --card: #fff; --tag: #e7f0fb;
+  --ok: #2f9e44; --bad: #e03131; --warn: #f08c00; --okbg: #e6f4ea; --badbg: #fdecec; --code: #f6f8fa; }
+@media (prefers-color-scheme: dark) {
+  :root { --ink: #e6e8eb; --muted: #9aa4b2; --line: #2f3742; --accent: #5aa9ff; --bg: #14181d; --card: #1c2128; --tag: #1d2c40;
+    --ok: #51cf66; --bad: #ff6b6b; --warn: #ffa94d; --okbg: #17301f; --badbg: #3a1d1f; --code: #161b22; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, "Segoe UI", Arial, sans-serif; }
+main { padding: 16px 24px; max-width: 1100px; }
+h1 { font-size: 22px; margin: 4px 0 8px; }
+h2 { font-size: 18px; margin: 30px 0 8px; padding-top: 6px; }
+h3 { font-size: 15px; margin: 16px 0 6px; }
+a { color: var(--accent); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 8px 0; }
+ol, ul { margin: 6px 0; padding-left: 22px; }
+li { margin: 3px 0; }
+b.t { background: var(--tag); padding: 0 5px; border-radius: 4px; font-weight: 600; }
+code, pre { font: 13px/1.4 Consolas, "Cascadia Mono", monospace; }
+code { background: var(--code); padding: 0 4px; border-radius: 4px; }
+pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; overflow-x: auto; }
+pre code { padding: 0; background: none; }
+.scroll { overflow-x: auto; margin: 6px 0; }
+table { border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; min-width: 100%; }
+th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 13px; color: var(--muted); font-weight: 600; background: var(--bg); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.c, th.c { text-align: center; }
+.ok { color: var(--ok); font-weight: 600; } .bad { color: var(--bad); font-weight: 600; } .warn { color: var(--warn); font-weight: 600; }
+tr.hl td { background: var(--okbg); } tr.lost td { background: var(--badbg); text-decoration: line-through; }
+.say { border-left: 3px solid var(--accent); padding: 4px 10px; margin: 8px 0; background: var(--card); border-radius: 0 8px 8px 0; }
+.say::before { content: "🎙 Сказать: "; font-weight: 600; }
+small, .muted { color: var(--muted); }
+nav.toc { margin: 6px 0 14px; font-size: 14px; line-height: 1.9; }
+nav.toc a { margin-right: 12px; white-space: nowrap; display: inline-block; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.two > * { min-width: 0; }
+@media (max-width: 760px) { main { padding: 12px; } .two { grid-template-columns: 1fr; }
+  th, td { padding: 6px 6px; overflow-wrap: anywhere; } th { white-space: normal; }
+  td pre { white-space: pre-wrap; overflow-wrap: anywhere; } .card { padding: 10px 10px; }
+  table.stack, .stack tbody, .stack tr, .stack td { display: block; width: 100%; min-width: 0; }
+  .stack tr:first-child { display: none; } table.stack { border: 0; background: none; }
+  .stack tr { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; }
+  .stack td { border: 0; padding: 4px 10px; } .stack td pre { overflow-wrap: normal; white-space: pre; }
+  .traps td:nth-child(2)::before { content: "Вывод: "; color: var(--muted); }
+  .cf td:nth-child(2)::before { content: "Проблема: "; color: var(--muted); }
+  .cf td:nth-child(3)::before { content: "Исправление: "; color: var(--muted); } }
+/* схемы */
+.slots { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+.slot { min-width: 54px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; text-align: center; background: var(--card); font-size: 13px; }
+.slot i { display: block; font-style: normal; font-size: 11px; color: var(--muted); }
+.slot.on { border-color: var(--accent); background: var(--tag); }
+.slot.col { border-color: var(--warn); }
+.flow { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.box { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 10px; font-size: 14px; }
+.box b { display: block; }
+.box.a { border-color: var(--accent); } .box.w { border-color: var(--warn); } .box.g { border-color: var(--ok); }
+.arr { align-self: center; color: var(--muted); font-size: 18px; }
+.bt { display: grid; grid-template-columns: repeat(30, 1fr); gap: 1px; margin: 3px 0; }
+.bt span { height: 14px; background: var(--line); border-radius: 2px; }
+.bt span.tr { background: var(--accent); opacity: .55; } .bt span.te { background: var(--warn); }
+.legend span { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin: 0 4px 0 10px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Техсекция: Python, SQL, ряды, инференс</h1>
+<p class="muted">Повторение перед собесом: каждая тема — с примером и тем, что сказать вслух. Числа замерены на Python 3.14
+и на учебной базе <code>career/learn/tech_python_sql/sql/seed.sql</code>. Руками решать — там же, <code>tasks.md</code>.
+<a href="tools.html">← Шпаргалка MLSD</a> · <a href="index.html">Карта</a></p>
+<nav class="toc">
+<b>Python:</b> <a href="#big-o">Сложность операций</a><a href="#dict">Как устроен dict</a><a href="#str">Строки и zero_one</a><a href="#traps">Ловушки</a><a href="#review">Как вести ревью</a><a href="#gil">GIL</a><br>
+<b>SQL:</b> <a href="#order">Порядок выполнения</a><a href="#null">NULL</a><a href="#join">JOIN размножает</a><a href="#rank">Ранги</a><a href="#window">Окна</a><a href="#islands">Острова и медиана</a><a href="#slow">Медленный запрос</a><br>
+<b>ML:</b> <a href="#ml">Минимум</a><a href="#metrics">Метрики прогноза</a><a href="#ts">Временные ряды</a><a href="#backtest">Оценка прогноза</a><a href="#infer">Быстрый инференс</a>
+</nav>
+
+<!-- ================= PYTHON ================= -->
+<h2 id="big-o">1. Сложность операций</h2>
+<p>n — длина коллекции, k — сколько берём. «Аморт.» — в среднем на операцию: иногда дорого (переезд), но редко.</p>
+<div class="scroll"><table>
+<tr><th>Операция</th><th>Сложность</th><th>Пример и почему</th></tr>
+<tr><td><code>x in list</code></td><td class="bad">O(n)</td><td>перебор подряд. Замер: 100 000 элементов — <b>556 мкс</b></td></tr>
+<tr><td><code>x in set</code>, <code>x in dict</code></td><td class="ok">O(1) в среднем</td><td>хеш → ячейка. Тот же поиск — <b>0,04 мкс</b>, в 14 000 раз быстрее</td></tr>
+<tr><td><code>d[k] = v</code>, <code>s.add(x)</code></td><td class="ok">O(1) аморт.</td><td>иногда таблица переезжает целиком за O(n), но размер растёт в разы → на n вставок O(n)</td></tr>
+<tr><td><code>list.append(x)</code>, <code>list.pop()</code></td><td class="ok">O(1) аморт.</td><td>список держит запас: ёмкость 4 → 8 → 16 → 24 → 32 → 40 (замер)</td></tr>
+<tr><td><code>list.pop(0)</code>, <code>list.insert(0, x)</code></td><td class="bad">O(n)</td><td>сдвигает все элементы. Очередь — <code>collections.deque</code>: <code>popleft()</code> за O(1)</td></tr>
+<tr><td><code>lst[i]</code>, <code>len(lst)</code></td><td class="ok">O(1)</td><td>массив указателей, длина хранится</td></tr>
+<tr><td><code>lst[a:b]</code>, <code>s[a:b]</code></td><td>O(b − a)</td><td>срез — это копия</td></tr>
+<tr><td><code>sorted(x)</code>, <code>list.sort()</code></td><td>O(n log n)</td><td>Timsort, устойчивая; на почти отсортированном — близко к O(n)</td></tr>
+<tr><td><code>heapq.nlargest(k, x)</code></td><td>O(n log k)</td><td>топ-k без полной сортировки; <code>Counter.most_common(k)</code> работает так же</td></tr>
+<tr><td><code>heappush</code>, <code>heappop</code></td><td>O(log n)</td><td>двоичная куча в списке</td></tr>
+<tr><td><code>Counter(s)</code></td><td>O(n)</td><td>один проход, цикл на C (<code>_count_elements</code>)</td></tr>
+<tr><td><code>set_a &amp; set_b</code></td><td>O(min(|a|, |b|))</td><td>идём по меньшему, ищем в большем</td></tr>
+<tr><td><code>"".join(parts)</code></td><td>O(суммарной длины)</td><td>считает итоговый размер и копирует один раз</td></tr>
+<tr><td><code>r += "0"</code> в цикле</td><td class="warn">O(n²) по языку</td><td>строка неизменяема → копия на каждом шаге. CPython умеет дописать на месте, если ссылка одна — замер 200 000 шагов: 11 мс против 7 мс у <code>join</code>. Но это не гарантия языка</td></tr>
+</table></div>
+<div class="say">«В среднем O(1), худший O(n) — при переезде или массе коллизий; амортизированно O(1), потому что таблица растёт в разы».</div>
+
+<h2 id="dict">2. Как устроен dict</h2>
+<div class="two">
+<div class="card"><b>Метод цепочек</b> <small>(Java HashMap, учебники)</small>
+<p>В ячейке — список всех ключей с этим остатком хеша.</p>
+<div class="slots">
+<div class="slot"><i>0</i>·</div><div class="slot"><i>1</i>·</div><div class="slot"><i>2</i>·</div>
+<div class="slot col"><i>3</i>кот → пёс</div><div class="slot"><i>4</i>·</div><div class="slot"><i>5</i>·</div>
+<div class="slot on"><i>6</i>ёж</div><div class="slot"><i>7</i>·</div>
+</div>
+<p>Доступ <b>O(1 + α)</b>, α = элементов / ячеек. Плохой хеш → все в одной цепочке → <b>O(n)</b>. Java 8 превращает длинную цепочку в дерево → O(log n). Порог роста — 0,75.</p>
+</div>
+<div class="card"><b>Открытая адресация</b> <small>(CPython)</small>
+<p>Всё в одной таблице. Ячейка занята → пробуем другую по псевдослучайной формуле <code>i = 5·i + 1 + perturb</code>, где <code>perturb</code> — старшие биты хеша.</p>
+<div class="slots">
+<div class="slot col"><i>0</i>пёс ↩</div><div class="slot"><i>1</i>·</div><div class="slot"><i>2</i>·</div>
+<div class="slot on"><i>3</i>кот</div><div class="slot"><i>4</i>·</div><div class="slot"><i>5</i>·</div>
+<div class="slot on"><i>6</i>ёж</div><div class="slot"><i>7</i>·</div>
+</div>
+<p>«пёс» хотел в 3, там «кот» → проба увела в 0. Порог роста — <b>2/3</b> заполнения.</p>
+</div>
+</div>
+<div class="card"><b>Компактный dict (с 3.6):</b> разреженная таблица индексов + плотный массив записей в порядке вставки.
+<div class="scroll"><table>
+<tr><th>индексы (8 ячеек)</th><td class="c">1</td><td class="c">·</td><td class="c">·</td><td class="c">0</td><td class="c">·</td><td class="c">·</td><td class="c">2</td><td class="c">·</td></tr>
+</table></div>
+<div class="scroll"><table>
+<tr><th>записи</th><th>0</th><th>1</th><th>2</th></tr>
+<tr><td>(хеш, ключ, значение)</td><td>кот</td><td>пёс</td><td>ёж</td></tr>
+</table></div>
+<p>Отсюда: порядок вставки сохраняется (гарантия языка с 3.7), памяти меньше — пустые ячейки занимают байт индекса, а не три указателя.</p>
+</div>
+<h3>Когда таблица растёт — замер <code>sys.getsizeof</code> на 3.14</h3>
+<div class="scroll"><table>
+<tr><th>Ключей стало</th><td class="c">6</td><td class="c">11</td><td class="c">22</td><td class="c">43</td><td class="c">86</td><td class="c">171</td></tr>
+<tr><th>Ячеек было → стало</th><td class="c">8 → 16</td><td class="c">16 → 32</td><td class="c">32 → 64</td><td class="c">64 → 128</td><td class="c">128 → 256</td><td class="c">256 → 512</td></tr>
+</table></div>
+<p>6-й ключ в 8 ячейках — это 6/8 &gt; 2/3. Новый размер — степень двойки ≥ 3 × число ключей.</p>
+<div class="card"><b>Вопрос Озона: «таблица на 100 ячеек, 100 элементов, что при 101-м?»</b>
+<ol>
+<li>Поправка: до 100 не дойдёт — рост начнётся при заполнении 2/3 (≈67) или 0,75 (75).</li>
+<li>Выделить таблицу больше (в разы), пересчитать позицию <b>каждого</b> ключа (<code>hash % новый_размер</code>) и переложить — O(n).</li>
+<li>Вставить новый ключ — O(1).</li>
+<li>«Скатится ли в линейную?» — нет: переезды при 6, 11, 22, 43… стоят в сумме ≈ 2n → <b>амортизированно O(1)</b>. Если важна задержка каждой операции — заранее задать размер или переезжать постепенно (так делает Redis).</li>
+</ol></div>
+
+<h2 id="str">3. Строки и задача zero_one</h2>
+<p><b>Задача:</b> <code>"sunny string chapter"</code> → строка из 0 и 1: <code>0</code> — символ встречается один раз, <code>1</code> — повторяется.</p>
+<pre><code>from collections import Counter
+
+def zero_one(s):
+    counts = Counter(s)                                          # шаг 1
+    return "".join("1" if counts[c] > 1 else "0" for c in s)     # шаг 2
+
+zero_one("sunny string chapter")   # '10110111101010000101'</code></pre>
+<div class="scroll"><table>
+<tr><th>Шаг</th><th>Время</th><th>Память</th><th>Почему</th></tr>
+<tr><td>1. <code>Counter(s)</code></td><td>O(n)</td><td>O(k)</td><td>k — разных символов (≤ алфавита); пробел тоже символ</td></tr>
+<tr><td>2. генератор + поиск в dict</td><td>O(n)</td><td>O(1) на шаг</td><td><code>counts[c]</code> — O(1) в среднем</td></tr>
+<tr><td>3. <code>"".join</code></td><td>O(n)</td><td>O(n)</td><td>результат длины n, копируется один раз</td></tr>
+<tr class="hl"><td>Итого</td><td>O(n)</td><td>O(n + k)</td><td></td></tr>
+</table></div>
+<h3>Что спросят следом</h3>
+<div class="scroll"><table>
+<tr><th>Вопрос</th><th>Ответ</th></tr>
+<tr><td>А если <code>result += "0"</code>?</td><td>Строки неизменяемы → новая строка и копия на каждом шаге → O(n²) по языку. В CPython оптимизация на месте при единственной ссылке, но полагаться нельзя (PEP 8).</td></tr>
+<tr><td>Что со старыми строками?</td><td>Счётчик ссылок падает до 0 → память освобождается сразу. Последнюю держит переменная <code>result</code>. Циклический сборщик нужен только для циклов ссылок.</td></tr>
+<tr><td>Сложность <code>append</code>?</td><td>O(1) аморт.: список выделяет память с запасом.</td></tr>
+<tr><td>Строка на 10 млрд символов?</td><td>Асимптотика та же, ломается память: 10+ ГБ. Читать файл кусками, <code>Counter.update(кусок)</code>; вторым проходом писать результат в файл.</td></tr>
+<tr><td>Есть ли готовое?</td><td><code>collections.Counter</code> — подкласс dict, подсчёт на C, быстрее ручного цикла.</td></tr>
+<tr><td>«Уникальные символы» — что уточнить?</td><td>(а) все ли уникальны: <code>len(set(s)) == len(s)</code>; (б) вернуть встречающиеся один раз: <code>"".join(c for c, k in Counter(s).items() if k == 1)</code> → <code>"uyigchape"</code>. Регистр и пробелы — спросить.</td></tr>
+</table></div>
+
+<h2 id="traps">4. Ловушки Python — код и что он выведет</h2>
+<div class="scroll"><table class="stack traps">
+<tr><th>Код</th><th>Вывод (3.14)</th><th>Почему → как правильно</th></tr>
+<tr><td><pre><code>def f(x, acc=[]):
+    acc.append(x); return acc
+f(1), f(2)</code></pre></td><td><code>[1, 2] [1, 2]</code></td><td>Значение по умолчанию создаётся <b>один раз</b> при <code>def</code>. → <code>acc=None; if acc is None: acc = []</code></td></tr>
+<tr><td><pre><code>class C:
+    items = []
+a, b = C(), C()
+a.items.append(1); b.items</code></pre></td><td><code>[1]</code></td><td>Атрибут класса общий; <code>a.items</code> не нашёлся в экземпляре → взят у класса и изменён на месте. → <code>self.items = []</code> в <code>__init__</code></td></tr>
+<tr><td><pre><code>class E:
+    def __eq__(s, o): return True
+{E()}</code></pre></td><td><code>TypeError: cannot use 'E' as a set element (unhashable type: 'E')</code></td><td>Определил <code>__eq__</code> без <code>__hash__</code> → Python ставит <code>__hash__ = None</code>. Контракт: <code>a == b ⇒ hash(a) == hash(b)</code>, хеш не меняется.</td></tr>
+<tr><td><pre><code>class L:
+    lock = threading.Lock
+with L().lock: ...</code></pre></td><td><code>TypeError: 'type' object does not support the context manager protocol</code></td><td>Без скобок — сам класс, а не замок. → <code>self.lock = threading.Lock()</code></td></tr>
+<tr><td><pre><code>m = [[0] * 2] * 2
+m[0][0] = 1; m</code></pre></td><td><code>[[1, 0], [1, 0]]</code></td><td>Две ссылки на один список. → <code>[[0] * 2 for _ in range(2)]</code></td></tr>
+<tr><td><pre><code>d = {}
+d[{"a": 1}] = 1</code></pre></td><td><code>TypeError: cannot use 'dict' as a dict key (unhashable type: 'dict')</code></td><td>Ключом может быть только неизменяемое. → <code>tuple</code>, <code>frozenset(d.items())</code></td></tr>
+<tr><td><pre><code>open(f, "w")
+pickle.dump(obj, fh)</code></pre></td><td><code>TypeError: write() argument must be str, not bytes</code></td><td>pickle пишет байты → <code>"wb"</code>, и <code>with open(...)</code>, чтобы файл закрылся. Лямбду не запиклить.</td></tr>
+<tr><td><pre><code>def _repr__(self): ...</code></pre></td><td>ошибки нет</td><td>Это не dunder → <code>repr()</code> берёт <code>object.__repr__</code>.</td></tr>
+<tr><td><pre><code>def g():
+    import json   # в функции</code></pre></td><td>работает</td><td>Модуль грузится один раз и кэшируется в <code>sys.modules</code>; повтор — поиск в словаре. Внутри — ради ленивой загрузки или разрыва циклического импорта.</td></tr>
+</table></div>
+
+<h2 id="review">5. Как вести ревью кода вслух</h2>
+<div class="flow">
+<div class="box w"><b>1. Что упадёт</b>TypeError, AttributeError, неверный режим файла</div><div class="arr">→</div>
+<div class="box w"><b>2. Что тихо врёт</b>общее состояние, коллизии ключей, сортировка не в ту сторону</div><div class="arr">→</div>
+<div class="box"><b>3. Контракты</b><code>__eq__</code>/<code>__hash__</code>, <code>NotImplemented</code> для чужого типа</div><div class="arr">→</div>
+<div class="box"><b>4. Прод</b>потоки, утечка памяти, нет лимита кэша</div><div class="arr">→</div>
+<div class="box g"><b>5. Итог</b>что взять из stdlib: <code>lru_cache</code>, <code>Counter</code></div>
+</div>
+<div class="card"><b>Шпаргалка по классу CachedFunction</b> (вопрос собеса)
+<div class="scroll"><table class="stack cf">
+<tr><th>Строка</th><th>Проблема</th><th>Исправление</th></tr>
+<tr><td><code>_cache = dict()</code> в теле класса</td><td>один кэш на <b>все</b> экземпляры; add1 и add2 пишут в одно место</td><td><code>self._cache = {}</code> в <code>__init__</code></td></tr>
+<tr><td><code>warm_cache=dict()</code></td><td>изменяемое значение по умолчанию (здесь только читается — но хрупко)</td><td><code>warm_cache=None</code></td></tr>
+<tr><td><code>update(**warm_cache)</code></td><td>ключи обязаны быть строками → TypeError</td><td><code>update(warm_cache)</code></td></tr>
+<tr><td><code>all_args = {'args':…, 'kwargs':…}</code></td><td>dict нехешируем → TypeError на первом вызове; нет функции в ключе → коллизии</td><td><code>(args, frozenset(kwargs.items()))</code></td></tr>
+<tr><td><code>open(file_name, 'w')</code></td><td>pickle пишет байты; файл не закрыт; лямбду не запиклить; кэш класса не сохранится</td><td><code>with open(f, 'wb')</code></td></tr>
+<tr><td><code>_repr__</code></td><td>не dunder</td><td><code>__repr__</code></td></tr>
+<tr><td><code>__hash__ = random</code></td><td>хеш меняется → <code>c in {c}</code> даёт False</td><td><code>hash(self.function)</code></td></tr>
+<tr><td><code>__eq__</code></td><td>с чужим типом → AttributeError</td><td><code>if not isinstance(...): return NotImplemented</code></td></tr>
+<tr class="hl"><td colspan="3">Весь класс заменяется на <code>functools.lru_cache(maxsize=…)</code> — с лимитом и потокобезопасный.</td></tr>
+</table></div></div>
+
+<h2 id="gil">6. GIL: чем ускорять</h2>
+<p><b>GIL</b> — замок в CPython: байткод Python в каждый момент исполняет один поток. Нужен, чтобы подсчёт ссылок и внутренности интерпретатора работали без замка на каждом объекте. Поток отдаёт GIL на ввод-выводе и по таймеру — каждые 5 мс.</p>
+<div class="scroll"><table>
+<tr><th>Задача</th><th>Пример</th><th class="c">Потоки</th><th class="c">Процессы</th><th class="c">asyncio</th></tr>
+<tr><td><b>CPU-bound</b> на Python</td><td>цикл, парсинг, подсчёт</td><td class="c bad">нет</td><td class="c ok">да</td><td class="c bad">нет</td></tr>
+<tr><td><b>CPU-bound</b> в C-библиотеке</td><td>NumPy, PyTorch, сжатие</td><td class="c ok">да</td><td class="c ok">да</td><td class="c bad">нет</td></tr>
+<tr><td><b>I/O-bound</b></td><td>HTTP-запросы, БД, диск</td><td class="c ok">да</td><td class="c warn">дорого</td><td class="c ok">да, лучше всего на тысячах</td></tr>
+</table></div>
+<div class="card"><b>Замер countdown</b> (20 млн шагов, Python 3.14):
+<pre><code>def countdown(n):
+    while n > 0:
+        n -= 1</code></pre>
+<div class="scroll"><table>
+<tr><th>Вариант</th><th>Время</th></tr>
+<tr><td>1 поток, <code>countdown(N)</code></td><td><b>0,96 с</b></td></tr>
+<tr class="lost"><td>2 потока по <code>N/2</code></td><td>1,17 с — медленнее</td></tr>
+</table></div>
+<p>Потоки по очереди держат GIL и тратят время на передачу. Ускорят: 2 процесса или сборка без GIL (3.13t / 3.14t, PEP 703).</p></div>
+<div class="scroll"><table>
+<tr><th></th><th>Потоки</th><th>Процессы</th></tr>
+<tr><td>Память</td><td>общая: обмен дешёвый, но гонки → замки</td><td>своя у каждого: обмен через pickle, очереди, shared memory</td></tr>
+<tr><td>Параллельность Python-кода</td><td>нет (GIL)</td><td>да — у каждого свой интерпретатор и GIL</td></tr>
+<tr><td>Запуск</td><td>дёшево</td><td>дорого (на Windows — spawn, заново импорт)</td></tr>
+<tr><td>Падение</td><td>валит процесс</td><td>изолировано</td></tr>
+</table></div>
+
+<!-- ================= SQL ================= -->
+<h2 id="order">7. SQL: порядок выполнения</h2>
+<pre><code>SELECT   u.city, SUM(o.amount) AS revenue      -- 5. считает выражения и окна
+FROM     users u JOIN orders o USING (user_id)  -- 1. собирает строки
+WHERE    o.status = 'paid'                      -- 2. фильтр строк: алиаса revenue ещё нет
+GROUP BY u.city                                 -- 3. схлопывает в группы
+HAVING   SUM(o.amount) > 100                    -- 4. фильтр групп
+ORDER BY revenue DESC                           -- 7. здесь алиас уже можно (6 — DISTINCT)
+LIMIT    3;                                     -- 8.</code></pre>
+<div class="flow">
+<div class="box">1 FROM, JOIN</div><div class="arr">→</div><div class="box">2 WHERE</div><div class="arr">→</div><div class="box">3 GROUP BY</div><div class="arr">→</div><div class="box">4 HAVING</div><div class="arr">→</div><div class="box a">5 SELECT + окна</div><div class="arr">→</div><div class="box">6 DISTINCT</div><div class="arr">→</div><div class="box">7 ORDER BY</div><div class="arr">→</div><div class="box">8 LIMIT</div>
+</div>
+<p>Отсюда: оконную функцию нельзя фильтровать в WHERE — только обернуть в подзапрос/CTE. <code>COUNT(*)</code> — все строки, <code>COUNT(col)</code> — где col не NULL, <code>COUNT(DISTINCT col)</code> — разные не-NULL.</p>
+
+<h2 id="null">8. NULL: три значения логики</h2>
+<div class="two">
+<div><div class="scroll"><table>
+<tr><th>Выражение</th><th>Результат</th></tr>
+<tr><td><code>NULL = NULL</code></td><td class="warn">UNKNOWN</td></tr>
+<tr><td><code>1 &lt;&gt; NULL</code></td><td class="warn">UNKNOWN</td></tr>
+<tr><td><code>TRUE AND UNKNOWN</code></td><td class="warn">UNKNOWN</td></tr>
+<tr><td><code>FALSE AND UNKNOWN</code></td><td>FALSE</td></tr>
+<tr><td><code>TRUE OR UNKNOWN</code></td><td>TRUE</td></tr>
+<tr><td><code>x IS NULL</code></td><td>TRUE / FALSE — только так</td></tr>
+</table></div>
+<p>WHERE пропускает только TRUE. UNKNOWN отбрасывается так же, как FALSE.</p></div>
+<div class="card"><b>Ловушка NOT IN</b>
+<pre><code>-- в orders есть гостевой заказ с user_id = NULL
+SELECT user_id FROM users
+WHERE user_id NOT IN (SELECT user_id FROM orders
+                      WHERE status = 'paid');</code></pre>
+Результат на учебной базе: <b class="bad">пусто</b>, хотя пользователи 6 и 7 без оплат есть.
+<p><code>6 NOT IN (1, 2, …, NULL)</code> = <code>6&lt;&gt;1 AND … AND 6&lt;&gt;NULL</code> = <code>TRUE AND UNKNOWN</code> = UNKNOWN.</p>
+<p>Правильно: <code>NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.user_id AND …)</code> или <code>LEFT JOIN … WHERE o.user_id IS NULL</code> → <b class="ok">6, 7</b>. В Postgres оба — anti join.</p></div>
+</div>
+<div class="card"><b>Ловушка LEFT JOIN + WHERE</b> — оплаченные заказы и выручка по городам
+<div class="two">
+<div><pre><code>LEFT JOIN orders o ON o.user_id = u.user_id
+WHERE o.status = 'paid'</code></pre>
+<div class="scroll"><table><tr><th>город</th><th>заказов</th><th>выручка</th></tr>
+<tr><td>Казань</td><td>4</td><td>680</td></tr><tr><td>Москва</td><td>8</td><td>570</td></tr><tr><td>NULL</td><td>1</td><td>60</td></tr>
+<tr class="lost"><td>Сочи</td><td>—</td><td>—</td></tr></table></div>
+<p class="bad">Сочи пропал: у его пользователя нет заказов → <code>o.status</code> = NULL → строку отсёк WHERE. LEFT стал INNER.</p></div>
+<div><pre><code>LEFT JOIN orders o ON o.user_id = u.user_id
+                  AND o.status = 'paid'</code></pre>
+<div class="scroll"><table><tr><th>город</th><th>заказов</th><th>выручка</th></tr>
+<tr><td>Казань</td><td>4</td><td>680</td></tr><tr><td>Москва</td><td>8</td><td>570</td></tr><tr><td>NULL</td><td>1</td><td>60</td></tr>
+<tr class="hl"><td>Сочи</td><td>0</td><td>0</td></tr></table></div>
+<p class="ok">Условие на правую таблицу — в ON. Считать <code>COUNT(o.order_id)</code> и <code>COALESCE(SUM(…), 0)</code>: <code>COUNT(*)</code> дал бы Сочи 1.</p></div>
+</div></div>
+
+<h2 id="join">9. JOIN по неуникальному ключу размножает строки</h2>
+<p><code>a(x)</code>: 1, 1, 2, NULL · <code>b(x)</code>: 1, 1, 1, 3, NULL. Сколько строк в <code>ON a.x = b.x</code>?</p>
+<div class="scroll"><table>
+<tr><th>a \ b</th><th class="c">1</th><th class="c">1</th><th class="c">1</th><th class="c">3</th><th class="c">NULL</th></tr>
+<tr><th>1</th><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c">·</td><td class="c">·</td></tr>
+<tr><th>1</th><td class="c ok">✓</td><td class="c ok">✓</td><td class="c ok">✓</td><td class="c">·</td><td class="c">·</td></tr>
+<tr><th>2</th><td class="c">·</td><td class="c">·</td><td class="c">·</td><td class="c">·</td><td class="c">·</td></tr>
+<tr><th>NULL</th><td class="c">·</td><td class="c">·</td><td class="c">·</td><td class="c">·</td><td class="c warn">≠</td></tr>
+</table></div>
+<div class="scroll"><table>
+<tr><th>JOIN</th><th>Строк</th><th>Откуда</th></tr>
+<tr><td>INNER</td><td><b>6</b></td><td>2 единицы × 3 единицы; NULL не равен даже NULL</td></tr>
+<tr><td>LEFT</td><td><b>8</b></td><td>6 + строка для 2 + строка для NULL из a (справа NULL)</td></tr>
+<tr><td>FULL</td><td><b>10</b></td><td>8 + 3 и NULL из b</td></tr>
+</table></div>
+<div class="say">«Перед SUM после JOIN проверяю уникальность ключа: заказы × платежи по user_id задвоят выручку».</div>
+
+<h2 id="rank">10. Ранги на ничьих</h2>
+<p>Отдел ML, <code>OVER (ORDER BY salary DESC)</code> — Борис и Вера получают по 250:</p>
+<div class="scroll"><table>
+<tr><th>Имя</th><th>Зарплата</th><th class="c">ROW_NUMBER</th><th class="c">RANK</th><th class="c">DENSE_RANK</th></tr>
+<tr><td>Анна</td><td>300</td><td class="c">1</td><td class="c">1</td><td class="c">1</td></tr>
+<tr><td>Борис</td><td>250</td><td class="c">2</td><td class="c">2</td><td class="c">2</td></tr>
+<tr><td>Вера</td><td>250</td><td class="c warn">3</td><td class="c">2</td><td class="c">2</td></tr>
+<tr><td>Глеб</td><td>200</td><td class="c">4</td><td class="c warn">4</td><td class="c ok">3</td></tr>
+</table></div>
+<div class="scroll"><table>
+<tr><th>Нужно</th><th>Берём</th></tr>
+<tr><td>«Вторая по величине зарплата»</td><td><code>DENSE_RANK = 2</code> → 250 (+ DISTINCT, иначе две строки)</td></tr>
+<tr><td>Топ-3 с ничьими, никого не обидеть</td><td><code>RANK &lt;= 3</code></td></tr>
+<tr><td>Ровно одна строка на группу (последний заказ)</td><td><code>ROW_NUMBER = 1</code> + детерминированный tie-breaker: <code>ORDER BY order_date DESC, order_id DESC</code></td></tr>
+</table></div>
+
+<h2 id="window">11. Оконные функции</h2>
+<p>GROUP BY схлопывает строки; окно <b>оставляет каждую строку</b> и дописывает агрегат по её партиции. Окно поверх GROUP BY — нарастающий итог выручки:</p>
+<pre><code>SELECT order_date, SUM(amount) AS revenue,
+       SUM(SUM(amount)) OVER (ORDER BY order_date) AS running_total
+FROM orders WHERE status = 'paid' GROUP BY order_date;</code></pre>
+<div class="scroll"><table>
+<tr><th>Дата</th><td>01-02</td><td>01-03</td><td>01-04</td><td>01-05</td><td>01-06</td><td>01-07</td><td>01-08</td></tr>
+<tr><th>Выручка</th><td>300</td><td>350</td><td>110</td><td>440</td><td>55</td><td>25</td><td>75</td></tr>
+<tr><th>Итог</th><td>300</td><td>650</td><td>760</td><td>1200</td><td>1255</td><td>1280</td><td>1355</td></tr>
+</table></div>
+<div class="scroll"><table>
+<tr><th>Рамка</th><th>Что считает</th></tr>
+<tr><td><code>OVER (ORDER BY d)</code></td><td>по умолчанию <code>RANGE UNBOUNDED PRECEDING … CURRENT ROW</code>: нарастающий итог, строки с одинаковым d входят вместе</td></tr>
+<tr><td><code>ROWS BETWEEN 6 PRECEDING AND CURRENT ROW</code></td><td>скользящее за 7 <b>строк</b>. Есть пропущенные дни → сначала календарь (<code>generate_series</code>), иначе 7 строк ≠ 7 дней</td></tr>
+<tr><td><code>OVER ()</code></td><td>вся выборка: доля строки <code>100.0 * x / SUM(x) OVER ()</code></td></tr>
+<tr><td><code>LAG(d) OVER (PARTITION BY user ORDER BY d)</code></td><td>предыдущее значение: дни с прошлого заказа</td></tr>
+</table></div>
+
+<h2 id="islands">12. Острова (N дней подряд) и медиана</h2>
+<div class="two">
+<div class="card"><b>Острова:</b> у дней одной серии <code>день − номер строки</code> одинаков. Пользователь 2, оплаченные дни без дублей:
+<div class="scroll"><table>
+<tr><th>день</th><th>rn</th><th>день − rn</th></tr>
+<tr><td>01-02</td><td>1</td><td>01-01</td></tr>
+<tr class="hl"><td>01-05</td><td>2</td><td>01-03</td></tr>
+<tr class="hl"><td>01-06</td><td>3</td><td>01-03</td></tr>
+<tr class="hl"><td>01-07</td><td>4</td><td>01-03</td></tr>
+</table></div>
+<pre><code>WITH days AS (SELECT DISTINCT user_id, order_date d
+              FROM orders WHERE status = 'paid'),
+g AS (SELECT user_id,
+             d - ROW_NUMBER() OVER (PARTITION BY user_id
+                                    ORDER BY d) * INTERVAL '1 day' AS island
+      FROM days)
+SELECT DISTINCT user_id FROM g
+GROUP BY user_id, island HAVING COUNT(*) >= 3;</code></pre>
+<p><b>DISTINCT по дням обязателен:</b> два заказа в один день сдвинут rn, и серия развалится. Самая длинная серия — <code>MAX(COUNT(*))</code> по пользователю.</p></div>
+<div class="card"><b>Медиана без функции:</b> 17 сумм заказов:
+<p><small>10 15 20 25 30 40 40 45 <b class="t">50</b> 60 70 80 90 100 200 300 300</small></p>
+<pre><code>WITH s AS (
+  SELECT amount,
+         ROW_NUMBER() OVER (ORDER BY amount) AS rn,
+         COUNT(*) OVER () AS n
+  FROM orders)
+SELECT AVG(amount) FROM s
+WHERE rn IN ((n + 1) / 2, (n + 2) / 2);</code></pre>
+<div class="scroll"><table>
+<tr><th>n</th><th>(n+1)/2</th><th>(n+2)/2</th><th>берём</th></tr>
+<tr><td>17</td><td>9</td><td>9</td><td>одну, 9-ю → <b>50</b></td></tr>
+<tr><td>18</td><td>9</td><td>10</td><td>среднее 9-й и 10-й</td></tr>
+</table></div>
+<p>Деление целочисленное. Postgres: <code>percentile_cont(0.5) WITHIN GROUP (ORDER BY amount)</code>. Миллиарды строк: приближённо — <code>quantileTDigest</code> в ClickHouse.</p></div>
+</div>
+<div class="card"><b>Строгая воронка и retention одной строкой</b>
+<div class="two">
+<pre><code>-- воронка: группировка по пользователю снимает дубли
+WITH f AS (
+  SELECT user_id,
+    MAX(CASE WHEN event_type='view'     THEN 1 ELSE 0 END) v,
+    MAX(CASE WHEN event_type='cart'     THEN 1 ELSE 0 END) c,
+    MAX(CASE WHEN event_type='purchase' THEN 1 ELSE 0 END) p
+  FROM events GROUP BY user_id)
+SELECT SUM(v), SUM(v*c), SUM(v*c*p) FROM f;
+-- учебная база: 6, 3, 2</code></pre>
+<pre><code>-- retention d1: EXISTS, а не JOIN — дубли не размножат
+SELECT signup_date, COUNT(*) AS cohort,
+  AVG(CASE WHEN EXISTS (
+        SELECT 1 FROM events e
+        WHERE e.user_id = u.user_id
+          AND e.event_date = u.signup_date + 1)
+      THEN 1.0 ELSE 0 END) AS d1
+FROM users u GROUP BY signup_date;
+-- 1.0 — чтобы не было целочисленного деления</code></pre>
+</div></div>
+
+<h2 id="slow">13. Запрос медленный — что делаю</h2>
+<ol>
+<li><code>EXPLAIN ANALYZE</code>: полный скан вместо индекса? оценка строк сильно мимо факта? JOIN размножил строки?</li>
+<li>Функция над колонкой ломает индекс: <code>WHERE date(ts) = '2026-01-02'</code> → <code>WHERE ts &gt;= '2026-01-02' AND ts &lt; '2026-01-03'</code>.</li>
+<li>Индекс под фильтр и ключ JOIN; составной <code>(a, b)</code> работает слева направо — по одному <code>b</code> не поможет.</li>
+<li>500 млн строк: партиционирование по дате, предагрегаты (витрина по дням), только нужные колонки.</li>
+<li><code>UNION</code> убирает дубли (сортировка или хеш — дороже), <code>UNION ALL</code> — нет. По умолчанию <code>UNION ALL</code>.</li>
+</ol>
+
+<!-- ================= ML ================= -->
+<h2 id="ml">14. ML-минимум с примерами</h2>
+<div class="scroll"><table>
+<tr><th>Тема</th><th>Суть</th><th>Пример</th></tr>
+<tr><td><b>ROC-AUC</b></td><td>вероятность, что случайный положительный получит скор выше случайного отрицательного; ранжирование без порога</td><td>позитивы 0,9 0,7 0,4, негативы 0,8 0,3 0,2: верно упорядочено 7 пар из 9 → <b>AUC = 0,78</b>. При сильном дисбалансе — смотреть PR-AUC</td></tr>
+<tr><td><b>F1</b></td><td>гармоническое среднее precision и recall; проваливается, если одна мала</td><td>P = 0,9, R = 0,1 → F1 = 2·0,09/1,0 = <b>0,18</b> (среднее было бы 0,5). Accuracy при 99 % негативов: «всегда 0» → 99 %</td></tr>
+<tr><td><b>Сигмоида</b></td><td>σ(z) = 1 / (1 + e<sup>−z</sup>); логрег линейно моделирует log(p/(1−p))</td><td>z = 0 → 0,5; z = 2 → 0,88; σ' = σ(1 − σ). Учится на log-loss — задача выпуклая</td></tr>
+<tr><td><b>Логрег на разреженных</b></td><td>скалярное произведение по ненулевым, CSR, обязательна регуляризация (L1 обнуляет признаки)</td><td>не центрировать: StandardScaler с вычитанием среднего убьёт разреженность → MaxAbsScaler</td></tr>
+<tr><td><b>KV-кэш</b></td><td>K и V прошлых токенов нужны каждому следующему шагу; Q — только текущего</td><td>шаг t: q<sub>t</sub> × [k<sub>1</sub>…k<sub>t</sub>] → веса × [v<sub>1</sub>…v<sub>t</sub>]. Старые q больше не нужны: маска каузальная, их выходы не меняются</td></tr>
+<tr><td><b>RAG или файнтюн</b></td><td>знания меняются, нужны ссылки и права → RAG; стиль, формат, узкая задача → файнтюн</td><td>паттерны RAG: гибрид BM25 + dense, реранкер, переписывание запроса, small-to-big, фильтры по метаданным</td></tr>
+</table></div>
+
+<h2 id="metrics">15. Метрики прогноза на одном примере</h2>
+<p>Факт: <b>100, 2, 50</b>. Прогноз: <b>90, 6, 50</b>. Ошибки: 10, 4, 0.</p>
+<div class="scroll"><table>
+<tr><th>Метрика</th><th>Формула</th><th>Значение</th><th>Оптимум и слабость</th></tr>
+<tr><td>MAE</td><td>mean |y − ŷ|</td><td>(10+4+0)/3 = <b>4,67</b></td><td>оптимум — медиана; устойчива к выбросам; в единицах таргета</td></tr>
+<tr><td>RMSE</td><td>√mean (y − ŷ)²</td><td>√(116/3) = <b>6,22</b></td><td>оптимум — среднее; сильнее штрафует большие промахи</td></tr>
+<tr class="lost"><td>MAPE</td><td>mean |y − ŷ| / y</td><td>(10% + 200% + 0)/3 = <b>70%</b></td><td>промах на 4 штуки при факте 2 съел всю метрику; на нуле — деление на 0</td></tr>
+<tr class="hl"><td>WAPE</td><td>Σ|y − ŷ| / Σy</td><td>14 / 152 = <b>9,2%</b></td><td>делит на суммарный объём: нули отдельных точек не ломают; вес по объёму</td></tr>
+</table></div>
+<div class="card"><b>Смещение MAPE:</b> прогноз 100.
+<div class="scroll"><table>
+<tr><th>Факт</th><th>Ошибка</th><th>MAPE</th></tr>
+<tr><td>50 (перепрогноз)</td><td>50</td><td class="bad">100%</td></tr>
+<tr><td>150 (недопрогноз)</td><td>50</td><td>33%</td></tr>
+</table></div>
+Одинаковый промах, но завышение штрафуется втрое сильнее → модель, оптимизирующая MAPE, <b>систематически занижает</b>. Недопрогноз ограничен 100% (прогноз ≥ 0), перепрогноз — нет.</div>
+
+<h2 id="ts">16. Временные ряды</h2>
+<div class="scroll"><table>
+<tr><th>Вопрос</th><th>Ответ с примером</th></tr>
+<tr><td><b>Стационарность</b></td><td>среднее и дисперсия постоянны, автоковариация зависит только от лага. Продажи растут на 10/мес — не стационарен; разности y<sub>t</sub> − y<sub>t−1</sub> ≈ 10 — стационарны</td></tr>
+<tr><td><b>I(d) в ARIMA</b></td><td>дифференцировать d раз: d = 1 убирает линейный тренд, d = 2 — квадратичный. ARMA строится на разностях, прогноз интегрируется обратно</td></tr>
+<tr><td><b>Как проверить</b></td><td>ADF: H0 — нестационарен (p &lt; 0,05 → отвергаем). KPSS: H0 — стационарен. Без тестов: график, скользящие среднее и дисперсия, ACF нестационарного затухает очень медленно</td></tr>
+<tr><td><b>Другие способы</b></td><td>log или Box-Cox — дисперсия растёт вместе с уровнем; сезонная разность y<sub>t</sub> − y<sub>t−7</sub>; вычесть тренд; STL-декомпозиция</td></tr>
+<tr><td><b>Сезонность</b></td><td>SARIMA(p,d,q)(P,D,Q)<sub>s</sub>: сезонные AR/MA на лагах s, 2s и сезонная разность D. Длинная или несколько сезонностей — Фурье-признаки как экзогенные</td></tr>
+<tr><td><b>Как учится</b></td><td>порядки — по ACF/PACF или перебором по AIC (auto_arima); коэффициенты всех частей, включая сезонные, — <b>совместно</b> максимумом правдоподобия (state-space + фильтр Калмана в SARIMAX)</td></tr>
+</table></div>
+<div class="card"><b>Пропуски дней при индексе-номере строки</b>
+<div class="scroll"><table>
+<tr><th>строка</th><td>0</td><td>1</td><td>2</td><td>3</td></tr>
+<tr><th>дата</th><td>пн</td><td>вт</td><td class="bad">чт</td><td>пт</td></tr>
+<tr><th>«лаг 1» для неё</th><td>—</td><td>пн</td><td class="bad">вт (позавчера!)</td><td>чт</td></tr>
+</table></div>
+<p>Лаг и недельная сезонность сползают → коэффициенты бессмысленны. Лечение: <code>asfreq('D')</code> на полный календарь + флаг пропуска.</p>
+<p>Заполнить вторник средним пн и ср — <b class="bad">утечка</b>: в проде среды ещё нет. Офлайн-метрика завышена, прод хуже. Заполнять прошлым (ffill), прошлой неделей или нулём, если продаж правда не было.</p></div>
+
+<h2 id="backtest">17. Как оценить прогноз на 30 дней</h2>
+<p><b>Бэктест со скользящей точкой старта</b> (rolling origin): обучили до даты → прогноз на горизонт → сдвинули старт → повторили.</p>
+<div class="card">
+<div class="legend"><span style="background:var(--accent);opacity:.55"></span>обучение<span style="background:var(--warn)"></span>прогноз (горизонт 5)<span style="background:var(--line)"></span>не используется</div>
+<div class="bt"><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="te"></span><span class="te"></span><span class="te"></span><span class="te"></span><span class="te"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<div class="bt"><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="te"></span><span class="te"></span><span class="te"></span><span class="te"></span><span class="te"></span><span></span><span></span><span></span><span></span><span></span></div>
+<div class="bt"><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="tr"></span><span class="te"></span><span class="te"></span><span class="te"></span><span class="te"></span><span class="te"></span></div>
+<p>Метрику считать <b>по каждому горизонту h</b> отдельно, усредняя по стартам. Пример (числа условные):</p>
+<div class="scroll"><table>
+<tr><th>Горизонт</th><td>h=1</td><td>h=7</td><td>h=14</td><td>h=30</td><td>одной цифрой</td></tr>
+<tr><th>WAPE</th><td>6%</td><td>9%</td><td>13%</td><td>21%</td><td class="warn">12% — прячет, что к 30-му дню всё плохо</td></tr>
+</table></div></div>
+<div class="scroll"><table>
+<tr><th>Почему 30 точек ARIMA ≠ 30 строк бустинга</th></tr>
+<tr><td>Это одна траектория из одной точки старта: точки коррелированы, ошибка растёт с горизонтом. Ряд нельзя делить случайно — только по времени.</td></tr>
+</table></div>
+<h3>Бустинг на рядах: стратегии многошагового прогноза</h3>
+<div class="scroll"><table>
+<tr><th>Стратегия</th><th>Как</th><th>Плюс</th><th>Минус</th></tr>
+<tr><td>Рекурсивная</td><td>одна модель на t+1, прогноз подаём как лаг на следующий шаг</td><td>одна модель</td><td>ошибка копится по шагам</td></tr>
+<tr class="hl"><td>Прямая (direct)</td><td>своя модель на каждый h: таргет сдвинут на h → «14 датасетов»</td><td>нет накопления</td><td>14 моделей; горизонты не согласованы</td></tr>
+<tr><td>Горизонт как признак</td><td>одна модель, h — колонка, строки размножены по h</td><td>одна модель, данные общие</td><td>датасет в H раз больше</td></tr>
+<tr><td>Multi-output</td><td>одна модель выдаёт вектор на H шагов</td><td>согласованность</td><td>не все бустинги умеют</td></tr>
+</table></div>
+<p><b>Признаки:</b> лаги таргета (≥ h для прямой стратегии!), скользящие со сдвигом (<code>shift(h).rolling(7)</code>), календарь, праздники, промо, известные заранее экзогенные. <b>Бустинг не экстраполирует:</b> предсказывает в диапазоне таргетов train → тренд моделировать отдельно или прогнозировать разности.</p>
+<div class="card"><b>Заводы расширяются — дрейф известен заранее</b>
+<ul>
+<li>Нормировать таргет: выпуск <b>на единицу мощности</b> → модель на стабильной величине → умножить на план мощности. План расширения — экзогенный признак.</li>
+<li>Мониторинг: метрика по свежим фактам, <b>ошибка со знаком</b> (смещение), CUSUM; PSI признаков.</li>
+<li>Регулярный сдвиг: коррекция остатка (сдвиг на скользящее среднее последних ошибок) + переобучение на скользящем окне с весом свежих данных; триггер — смещение вышло за порог.</li>
+</ul></div>
+
+<h2 id="infer">18. Быстрый инференс</h2>
+<p><b>Сначала профилировать:</b> где время — признаки, сеть или модель. Дальше по нарастанию:</p>
+<div class="scroll"><table>
+<tr><th>Приём</th><th>Что даёт</th><th>Цена</th></tr>
+<tr><td>Квантование fp32 → int8</td><td>в ~4 раза меньше память, быстрее на CPU</td><td>падение качества; лечится калибровочным набором или QAT</td></tr>
+<tr><td>Дистилляция</td><td>маленькая модель учится у большой</td><td>нужно обучение</td></tr>
+<tr><td>Отбор признаков, ONNX/TensorRT, батчинг</td><td>меньше работы на запрос</td><td>инженерия</td></tr>
+<tr><td>Кэш и предрасчёт офлайн</td><td>известные объекты — без модели</td><td>свежесть</td></tr>
+<tr class="hl"><td>Каскад</td><td>маленькая решает очевидное, большая — пограничное</td><td>p99 растёт на доле сложных</td></tr>
+</table></div>
+<div class="card"><b>Каскад по уверенности</b>
+<div class="flow">
+<div class="box a"><b>Запрос</b>100%</div><div class="arr">→</div>
+<div class="box g"><b>Маленькая модель</b>скор s, ~5 мс</div><div class="arr">→</div>
+<div class="box"><b>s &lt; 0,2 или s &gt; 0,8</b>95% — ответ сразу</div>
+<div class="arr">/</div>
+<div class="box w"><b>0,2 ≤ s ≤ 0,8</b>5% → большая модель, ~200 мс</div>
+</div>
+<p>Средняя задержка ≈ 0,95·5 + 0,05·205 ≈ <b>15 мс</b> вместо 200; p99 = путь через большую. Пороги — по кривой «доля в большую модель → качество» под бюджет задержки и цену ошибки.</p></div>
+<div class="two">
+<div class="card"><b>Дистилляция: что подавать как таргет</b>
+<div class="scroll"><table>
+<tr><th></th><th>кот</th><th>рысь</th><th>машина</th></tr>
+<tr><td>Жёсткая метка</td><td>1</td><td>0</td><td>0</td></tr>
+<tr class="hl"><td>Мягкая метка учителя (T &gt; 1)</td><td>0,70</td><td>0,25</td><td>0,05</td></tr>
+</table></div>
+<p>В мягких метках знание «кот похож на рысь, не на машину». Лосс = KL(учитель ∥ ученик) при температуре T + CE по истинным меткам. Учителем можно разметить больше неразмеченных данных.</p></div>
+<div class="card"><b>Калибровка — решит ли проблему пограничных?</b>
+<p>Модель говорит 0,9, а среди таких объектов позитивов 70% → переуверена. Калибровка на отложенной выборке: <b>Platt</b> (сигмоида поверх скора) или <b>изотоническая</b> регрессия. Проверка — reliability diagram, Brier, ECE.</p>
+<p class="warn">Калибровка монотонна → порядок скоров тот же → AUC не меняется. Вероятности станут честными, порог осмысленным, но разделять классы лучше модель не начнёт.</p>
+<p>Пограничные лечатся каскадом: зону неуверенности — в большую модель или человеку; маленькую дообучить на трудных примерах, найденных большой.</p></div>
+</div>
+<p class="muted" style="margin-top:28px">Источник: <code>career/learn/tech_python_sql/README.md</code>, колода «Озон» в боте. Числа замеров — Python 3.14, учебная база SQLite.</p>
+</main>
+</body>
+</html>
