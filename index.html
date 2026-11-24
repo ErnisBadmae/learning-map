@@ -87,6 +87,7 @@ main.wide .row { grid-template-columns: 40px minmax(0, 1fr) 340px; column-gap: 2
 .tile .chip { font-size: 13px; background: #eef4fc; border-radius: 999px; padding: 2px 9px; }
 .tile .to { color: #98a2b3; font-weight: 700; }
 .tile .meta { margin-top: 10px; font-size: 12px; color: var(--muted); }
+a.tile { display: block; color: inherit; text-decoration: none; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 20px; }
 @media (max-width: 760px) {
   /* One column: the step, its metrics under it, then the next step. */
@@ -133,6 +134,11 @@ function up(board, level) {
   return null;
 }
 const roots = DATA.boards.filter((b) => !up(b, b.levels[0]));
+// Hand-written cheat-sheet pages of the same site: tiles on the home screen next to the maps.
+const PAGES = [
+  ["techsection.html", "Техсекция: Python, SQL, ряды, инференс", "Шпаргалка · 18 разделов: dict, GIL, ревью, SQL, окна, ряды"],
+  ["tools.html", "Выбор инструмента MLSD", "Шпаргалка · от выхода к модели, лоссы, деревья, случайный лес"],
+];
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -280,6 +286,12 @@ function render(at) {
     main.append(el("h1", "", "Карты"));
     const list = el("div", "tiles");
     roots.forEach((b) => list.append(tileCard(b, { text: b.title, open: b.id + "/" + b.levels[0].id, key: "" })));
+    PAGES.forEach(([href, title, chain]) => {
+      const card = el("a", "tile");
+      card.href = href;
+      card.append(el("div", "title", title), el("div", "meta", chain));
+      list.append(card);
+    });
     main.append(list);
   } else {
     main.append(el("h1", "", at.level.title));
